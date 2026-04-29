@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.cruzeiro.calendar.soccer</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>/Users/oliveirarodrigo36/Library/CloudStorage/OneDrive-Personal/Documents/ClaudeCode/cruzeiro-calendar/cruzeiro_calendar.py</string>
+        <string>--soccer</string>
+    </array>
+    <!-- Every Sunday at 09:00 local time -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>0</integer>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    <key>RunAtLoad</key>
+    <false/>
+    <key>StandardOutPath</key>
+    <string>/Users/oliveirarodrigo36/Library/CloudStorage/OneDrive-Personal/Documents/ClaudeCode/cruzeiro-calendar/cruzeiro_calendar_soccer.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/oliveirarodrigo36/Library/CloudStorage/OneDrive-Personal/Documents/ClaudeCode/cruzeiro-calendar/cruzeiro_calendar_soccer.log</string>
+</dict>
+</plist>

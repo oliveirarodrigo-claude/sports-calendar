@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sports Calendar — Changelog</title>
+<style>
+  :root {
+    --bg:        #0d0f14;
+    --surface:   #161a23;
+    --border:    #232736;
+    --muted:     #3a3f52;
+    --text:      #e2e6f3;
+    --subtle:    #7b82a0;
+    --accent:    #5b7cfa;
+    --green:     #3ecf72;
+    --orange:    #f5a623;
+    --red:       #f25f5c;
+    --purple:    #b48efa;
+
+    --soccer:   #3ecf72;
+    --tennis:   #f5a623;
+    --wc:       #5b7cfa;
+    --cs2:      #b48efa;
+    --system:   #7b82a0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 48px 24px 80px;
+  }
+
+  /* ── Header ────────────────────────────────────────────────────── */
+  .header {
+    max-width: 780px;
+    margin: 0 auto 48px;
+  }
+  .header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+  .header p {
+    color: var(--subtle);
+    margin-top: 6px;
+    font-size: 13px;
+  }
+
+  /* ── Summary pills ─────────────────────────────────────────────── */
+  .pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .pill {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 5px 14px 5px 10px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .pill-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── Timeline ──────────────────────────────────────────────────── */
+  .timeline {
+    max-width: 780px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .timeline::before {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: var(--border);
+  }
+
+  /* ── Date group ────────────────────────────────────────────────── */
+  .date-group {
+    margin-bottom: 40px;
+  }
+  .date-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    position: relative;
+    padding-left: 40px;
+  }
+  .date-label::before {
+    content: "";
+    position: absolute;
+    left: 10px;
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+    z-index: 1;
+  }
+  .date-label span {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--subtle);
+  }
+
+  /* ── Entry card ────────────────────────────────────────────────── */
+  .entry {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-left: 40px;
+    margin-bottom: 10px;
+    transition: border-color 0.15s;
+  }
+  .entry:hover {
+    border-color: var(--muted);
+  }
+
+  .entry-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .entry-icon {
+    font-size: 18px;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .entry-body { flex: 1; min-width: 0; }
+
+  .entry-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.4;
+  }
+  .entry-desc {
+    font-size: 12.5px;
+    color: var(--subtle);
+    margin-top: 4px;
+    line-height: 1.55;
+  }
+
+  .entry-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .tag {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+  }
+  .tag-soccer  { color: var(--soccer); border-color: rgba(62,207,114,.25); background: rgba(62,207,114,.08); }
+  .tag-tennis  { color: var(--tennis); border-color: rgba(245,166,35,.25); background: rgba(245,166,35,.08); }
+  .tag-wc      { color: var(--wc);     border-color: rgba(91,124,250,.25); background: rgba(91,124,250,.08); }
+  .tag-cs2     { color: var(--cs2);    border-color: rgba(180,142,250,.25); background: rgba(180,142,250,.08); }
+  .tag-system  { color: var(--subtle); border-color: rgba(123,130,160,.25); background: rgba(123,130,160,.08); }
+  .tag-fix     { color: var(--red);    border-color: rgba(242,95,92,.25);  background: rgba(242,95,92,.08); }
+  .tag-new     { color: var(--green);  border-color: rgba(62,207,114,.25); background: rgba(62,207,114,.08); }
+  .tag-tweak   { color: var(--orange); border-color: rgba(245,166,35,.25); background: rgba(245,166,35,.08); }
+
+  /* ── Badge chip ────────────────────────────────────────────────── */
+  .badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-left: auto;
+    flex-shrink: 0;
+    align-self: flex-start;
+  }
+  .badge-new   { background: rgba(62,207,114,.15); color: var(--green); }
+  .badge-fix   { background: rgba(242,95,92,.15);  color: var(--red); }
+  .badge-tweak { background: rgba(245,166,35,.15); color: var(--orange); }
+
+  /* ── Current state table ───────────────────────────────────────── */
+  .state-section {
+    max-width: 780px;
+    margin: 0 auto 48px;
+  }
+  .state-section h2 {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--subtle);
+    margin-bottom: 14px;
+  }
+  .state-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 10px;
+  }
+  .state-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .state-card .sc-icon { font-size: 22px; margin-bottom: 8px; }
+  .state-card .sc-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--subtle);
+    margin-bottom: 6px;
+  }
+  .state-card .sc-value {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .state-card .sc-sub {
+    font-size: 11.5px;
+    color: var(--subtle);
+    margin-top: 2px;
+  }
+
+  /* ── Footer ────────────────────────────────────────────────────── */
+  .footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 60px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────────────── -->
+<div class="header">
+  <h1>🗓 Sports Calendar — Changelog</h1>
+  <p>Tracking all features, fixes, and tweaks built into the Cruzeiro Calendar automation.</p>
+
+  <div class="pills">
+    <div class="pill"><div class="pill-dot" style="background:var(--soccer)"></div>⚽️ Cruzeiro</div>
+    <div class="pill"><div class="pill-dot" style="background:var(--tennis)"></div>🎾 João Fonseca</div>
+    <div class="pill"><div class="pill-dot" style="background:var(--wc)"></div>🏆 World Cup 2026</div>
+    <div class="pill"><div class="pill-dot" style="background:var(--cs2)"></div>🎮 FURIA CS2</div>
+    <div class="pill"><div class="pill-dot" style="background:var(--system)"></div>⚙️ System</div>
+  </div>
+</div>
+
+<!-- ── Current state ───────────────────────────────────────────────────── -->
+<div class="state-section">
+  <h2>Current State</h2>
+  <div class="state-grid">
+    <div class="state-card">
+      <div class="sc-icon">⚽️</div>
+      <div class="sc-label">Cruzeiro</div>
+      <div class="sc-value">Weekly</div>
+      <div class="sc-sub">Sundays 09:00 BRT<br>CBF PDF + ESPN</div>
+    </div>
+    <div class="state-card">
+      <div class="sc-icon">🎾</div>
+      <div class="sc-label">Fonseca</div>
+      <div class="sc-value">5 min / Daily</div>
+      <div class="sc-sub">Game day → every 5 min<br>Otherwise once/day</div>
+    </div>
+    <div class="state-card">
+      <div class="sc-icon">🏆</div>
+      <div class="sc-label">World Cup</div>
+      <div class="sc-value">Hourly</div>
+      <div class="sc-sub">Active from Jun 24<br>Exits instantly before</div>
+    </div>
+    <div class="state-card">
+      <div class="sc-icon">🎮</div>
+      <div class="sc-label">FURIA CS2</div>
+      <div class="sc-value">5 min / Daily</div>
+      <div class="sc-sub">Game day → every 5 min<br>Otherwise once/day</div>
+    </div>
+    <div class="state-card">
+      <div class="sc-icon">🗑️</div>
+      <div class="sc-label">Deletion Rule</div>
+      <div class="sc-value">Future only</div>
+      <div class="sc-sub">Past events are never<br>deleted or overwritten</div>
+    </div>
+    <div class="state-card">
+      <div class="sc-icon">📅</div>
+      <div class="sc-label">Calendar</div>
+      <div class="sc-value">Sports on TV</div>
+      <div class="sc-sub">iCloud · EventKit<br>No Calendar.app needed</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Timeline ────────────────────────────────────────────────────────── -->
+<div class="timeline">
+
+  <!-- ── Apr 27, 2026 ──────────────────────────────────────── -->
+  <div class="date-group">
+    <div class="date-label"><span>Apr 27, 2026</span></div>
+
+    <div class="entry">
+      <div class="entry-top">
+        <div class="entry-icon">🏆</div>
+        <div class="entry-body">
+          <div class="entry-title">World Cup — hourly schedule, Jun 24 cutoff</div>
+          <div class="entry-desc">Changed from weekly Sunday run to every hour. Script self-exits before Jun 24 (when knockout bracket becomes relevant), was Jun 1 before. LaunchAgent reloaded automatically.</div>
+        </div>
+        <div class="badge badge-tweak">Tweak</div>
+      </div>
+      <div class="entry-tags">
+        <span class="tag tag-wc">World Cup</span>
+        <span class="tag tag-system">LaunchAgent</span>
+        <span class="tag tag-tweak">Schedule</span>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-top">
+        <div class="entry-icon">🎮</div>
+        <div class="entry-body">
+          <div class="entry-title">FURIA — match duration reduced to 2 hours</div>
+          <div class="entry-desc">Calendar events for FURIA CS2 matches were blocking 3 hours. Reduced to 2 hours max as requested.</div>
+        </div>
+        <div class="badge badge-tweak">Tweak</div>
+      </div>
+      <div class="entry-tags">
+        <span class="tag tag-cs2">FURIA CS2</span>
+        <span class="tag tag-tweak">Duration</span>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-top">
+        <div class="entry-icon">🗑️</div>
+        <div class="entry-body">
+          <div class="entry-title">Swift binary — past events never deleted</div>
+          <div class="entry-desc">Added <code style="background:var(--border);padding:1px 5px;border-radius:4px;font-size:11px">ev.startDate > now</code> guard to both prefix and tag deletion filters. Once a game is played it stays in your calendar permanently — no sync will ever remove it.</div>
+        </div>
+        <div class="badge badge-fix">Fix</div>
+      </div>
+      <div class="entry-tags">
+        <span class="tag tag-fix">Bug Fix</span>
+        <span class="tag tag-system">Swift / EventKit</span>
+        <span class="tag tag-soccer">Cruzeiro</span>
+        <span class="tag tag-tennis">Fonseca</span>
+        <span class="tag tag-wc">World Cup</span>
+        <span class="tag tag-cs2">FURIA CS2</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Apr 26, 2026 ──────────────────────────────────────── -->
+  <div class="date-group">
+    <div class="date-label"><span>Apr 26, 2026</span></div>
+
+    <div class="entry">
+      <div class="entry-top">
+        <div class="entry-icon">🎾</div>
+        <div class="entry-body">
+          <div class="entry-title">Fonseca — 3-hour live buffer to prevent mid-match disappearance</div>
+          <div class="entry-desc">Events were being deleted by the Swift binary as soon as a match started (startDate ≤ now). Fixed by keeping events in the fetch window for 3 hours after start time so the calendar entry stays visible while a match is live.</div>
+        </div>
+        <div class="badge badge-fix">Fix</div>
+      </div>
+      <div class="entry-tags">
+        <span class="tag tag-fix">Bug Fix</span>
+        <span class="tag tag-tennis">Fonseca</span>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-top">
+        <div class="entry-icon">🎮</div>
+        <div class="entry-body">
+          <div class="entry-title">FURIA — 4-hour live buffer for CS2 Bo3 matches</div>
+          <div class="entry-desc">Same disappearing-event fix applied to FURIA. CS2 Bo3 matches can run long, so the buffer is 4 hours instead of 3.</div>
+        </div>
+        <div class="badge badge-fix">Fix</div>
+      </div>
+      <div class="entry-tags">
+        <span class="tag tag-fix">Bug Fix</span>
+        <span class="tag tag-cs2">FURIA CS2</span>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-top">
+        <div class="entry-icon">⚡</div>
+        <div class="entry-body">
+          <div class="entry-title">Two-tier fast update — daily unless game today/tomorrow</div>
+          <div class="entry-desc">Tennis and FURIA jobs now run once per day when no match is imminent, and switch to every 5 minutes when there's a game today or tomorrow. Saves API calls without losing precision near game time.</div>
+        </div>
+        <div class="badge badge-new">New</div>
+      </div>
+      <div class="entry-tags">
+        <span class="tag tag-new">Feature</span>
+        <span class="tag tag-tennis">Fonseca</span>
+        <span class="tag tag-cs2">FURIA CS2</span>
+        <span class="tag tag-system">LaunchAgent</span>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-top">
+        <div class="entry-icon">⚙️</div>
+        <div class="entry-body">
+          <div class="entry-title">LaunchAgent split into 3 separate jobs</div>
+          <div class="entry-desc">
+            Separated into <strong>--fast</strong> (every 5 min, tennis + FURIA), <strong>--soccer</strong> (Sundays 09:00, Cruzeiro only), and <strong>--worldcup</strong> (hourly from Jun 24). Each job uses selective deletion meta so it never touches the other sports' events.
+          </div>
+        </div>
+        <div class="badge badge-new">New</div>
+      </div>
+      <div class="entry-tags">
+        <span class="tag tag-new">Architecture</span>
+        <span class="tag tag-system">LaunchAgent</span>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-top">
+        <div class="entry-icon">🎮</div>
+        <div class="entry-body">
+          <div class="entry-title">FURIA CS2 — Liquipedia integration</div>
+          <div class="entry-desc">Added FURIA CS2 matches via Liquipedia MediaWiki API. HLTV was blocked by Cloudflare, ESPN has no CS2. Scrapes confirmed matches with specific time + known opponent only — no TBD entries. Tagged <code style="background:var(--border);padding:1px 5px;border-radius:4px;font-size:11px">furia-cs2</code> via ev.url for selective deletion.</div>
+        </div>
+        <div class="badge badge-new">New</div>
+      </div>
+      <div class="entry-tags">
+        <span class="tag tag-new">Feature</span>
+        <span class="tag tag-cs2">FURIA CS2</span>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-top">
+        <div class="entry-icon">🏆</div>
+        <div class="entry-body">
+          <div class="entry-title">FIFA World Cup 2026 — full schedule with flags &amp; TBD knockout rounds</div>
+          <div class="entry-desc">Added all 104 WC games via ESPN public API. Group stage shows country flags per team. Knockout rounds show <em>🏆 World Cup Round of 16 · TBD vs TBD</em> and update each run as the bracket fills. Tagged <code style="background:var(--border);padding:1px 5px;border-radius:4px;font-size:11px">wc2026</code> for selective deletion since titles vary per country.</div>
+        </div>
+        <div class="badge badge-new">New</div>
+      </div>
+      <div class="entry-tags">
+        <span class="tag tag-new">Feature</span>
+        <span class="tag tag-wc">World Cup</span>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-top">
+        <div class="entry-icon">🎾</div>
+        <div class="entry-body">
+          <div class="entry-title">Fonseca — switched to direct season eventlog</div>
+          <div class="entry-desc">Original approach scanned 20 ATP tournaments individually. Replaced with Fonseca's direct <code style="background:var(--border);padding:1px 5px;border-radius:4px;font-size:11px">/seasons/2026/athletes/11745/eventlog</code> from ESPN Core API — faster, more accurate, covers his full season in one call. Title shows opponent last name only, no tournament name.</div>
+        </div>
+        <div class="badge badge-fix">Fix</div>
+      </div>
+      <div class="entry-tags">
+        <span class="tag tag-fix">Improvement</span>
+        <span class="tag tag-tennis">Fonseca</span>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-top">
+        <div class="entry-icon">🎾</div>
+        <div class="entry-body">
+          <div class="entry-title">João Fonseca ATP tennis — initial integration</div>
+          <div class="entry-desc">Added upcoming ATP matches for João Fonseca. Singles only. Events marked free availability since ATP times are best estimates. 3-hour duration per match.</div>
+        </div>
+        <div class="badge badge-new">New</div>
+      </div>
+      <div class="entry-tags">
+        <span class="tag tag-new">Feature</span>
+        <span class="tag tag-tennis">Fonseca</span>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-top">
+        <div class="entry-icon">⚽️</div>
+        <div class="entry-body">
+          <div class="entry-title">Cruzeiro — vs / @ home &amp; away format</div>
+          <div class="entry-desc">Home games show <em>Cruzeiro vs Opponent</em>, away games show <em>Cruzeiro @ Opponent</em>. Uses ESPN's <code style="background:var(--border);padding:1px 5px;border-radius:4px;font-size:11px">homeAway</code> field — accurate per game. Mirrors NFL calendar convention.</div>
+        </div>
+        <div class="badge badge-new">New</div>
+      </div>
+      <div class="entry-tags">
+        <span class="tag tag-new">Feature</span>
+        <span class="tag tag-soccer">Cruzeiro</span>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-top">
+        <div class="entry-icon">⚽️</div>
+        <div class="entry-body">
+          <div class="entry-title">Cruzeiro — CBF PDF as source of truth for Brasileirão times</div>
+          <div class="entry-desc">Brasileirão kick-off times come from the official CBF Tabela Detalhada PDF (fetched via Playwright headless). ESPN is used as fallback and for Libertadores / Copa do Brasil. TBD games become all-day events.</div>
+        </div>
+        <div class="badge badge-new">New</div>
+      </div>
+      <div class="entry-tags">
+        <span class="tag tag-new">Feature</span>
+        <span class="tag tag-soccer">Cruzeiro</span>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-top">
+        <div class="entry-icon">🏗️</div>
+        <div class="entry-body">
+          <div class="entry-title">EventKit Swift binary — direct CalendarAgent writes</div>
+          <div class="entry-desc">Replaced AppleScript + ICS import approach with a compiled Swift binary using EventKit. Writes directly to CalendarAgent — Calendar.app never opens. Supports selective deletion via title prefixes and URL tags.</div>
+        </div>
+        <div class="badge badge-new">New</div>
+      </div>
+      <div class="entry-tags">
+        <span class="tag tag-new">Architecture</span>
+        <span class="tag tag-system">Swift / EventKit</span>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="footer">
+  Last updated Apr 27, 2026 · Cruzeiro Calendar Project
+</div>
+
+</body>
+</html>

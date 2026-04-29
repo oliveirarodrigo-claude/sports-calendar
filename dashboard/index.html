@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🦊 Cruzeiro Calendar — How It Works</title>
+  <style>
+    :root {
+      --blue:    #1D4ED8;
+      --blue-lt: #EFF6FF;
+      --gold:    #D97706;
+      --gold-lt: #FFFBEB;
+      --green:   #059669;
+      --green-lt:#ECFDF5;
+      --red:     #DC2626;
+      --red-lt:  #FEF2F2;
+      --gray:    #6B7280;
+      --gray-lt: #F9FAFB;
+      --border:  #E5E7EB;
+      --text:    #111827;
+      --sub:     #374151;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #F3F4F6;
+      color: var(--text);
+      padding: 32px 16px 64px;
+    }
+
+    /* ── Header ── */
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .header h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.5px; }
+    .header p  { color: var(--gray); margin-top: 6px; font-size: 1rem; }
+
+    /* ── Section titles ── */
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--gray);
+      margin: 40px 0 16px;
+    }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+    .tab {
+      padding: 8px 20px;
+      border-radius: 9999px;
+      border: 2px solid var(--border);
+      background: white;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+      color: var(--gray);
+    }
+    .tab.active {
+      border-color: var(--blue);
+      background: var(--blue);
+      color: white;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: white;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+    .card-body { padding: 20px; }
+
+    /* ── Comparison grid ── */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 640px) { .compare-grid { grid-template-columns: 1fr; } }
+
+    .compare-card {
+      border-radius: 16px;
+      border: 2px solid var(--border);
+      overflow: hidden;
+    }
+    .compare-card.current  { border-color: #FCA5A5; }
+    .compare-card.new      { border-color: #6EE7B7; }
+
+    .compare-head {
+      padding: 14px 18px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .compare-card.current .compare-head { background: var(--red-lt);   color: var(--red); }
+    .compare-card.new     .compare-head { background: var(--green-lt); color: var(--green); }
+
+    .compare-rows { padding: 12px 0; }
+    .compare-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 18px;
+      font-size: 0.875rem;
+      color: var(--sub);
+      line-height: 1.4;
+    }
+    .compare-row .icon { flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Fake Apple Calendar ── */
+    .cal-chrome {
+      background: white;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 24px rgba(0,0,0,.12);
+      overflow: hidden;
+      max-width: 780px;
+      margin: 0 auto;
+    }
+    .cal-titlebar {
+      background: #ECECEC;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .cal-dot { width:12px; height:12px; border-radius:50%; }
+    .cal-dot.r { background:#FF5F57; }
+    .cal-dot.y { background:#FEBC2E; }
+    .cal-dot.g { background:#28C840; }
+    .cal-title-text { flex:1; text-align:center; font-size:0.8rem; font-weight:600; color:#555; margin-right:32px; }
+
+    .cal-toolbar {
+      background: white;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .cal-toolbar-month { font-size: 1.1rem; font-weight: 700; }
+    .cal-toolbar-right { display:flex; gap:8px; align-items:center; }
+    .cal-btn {
+      background: #F3F4F6;
+      border: none;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--sub);
+      cursor: default;
+    }
+
+    .cal-week-header {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      border-bottom: 1px solid var(--border);
+      background: #FAFAFA;
+    }
+    .cal-week-header div {
+      padding: 6px 0;
+      text-align: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--gray);
+      text-transform: uppercase;
+    }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+    }
+    .cal-day {
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      min-height: 90px;
+      padding: 6px;
+      position: relative;
+    }
+    .cal-day:nth-child(7n) { border-right: none; }
+    .cal-day.other-month .day-num { color: #D1D5DB; }
+    .cal-day.today .day-num {
+      background: #1D4ED8;
+      color: white;
+      border-radius: 50%;
+      width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .day-num {
+      font-size: 0.75rem;
+      font-weight: 600;
+      width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 3px;
+    }
+
+    /* Event chips */
+    .cal-event {
+      border-radius: 4px;
+      padding: 2px 5px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: default;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .cal-event.subscribed {
+      background: #DBEAFE;
+      color: #1E40AF;
+      border-left: 3px solid #3B82F6;
+    }
+    .cal-event.real {
+      background: #052D66;
+      color: white;
+      border-left: 3px solid #1D4ED8;
+    }
+    .cal-event.tbd {
+      background: #FEF3C7;
+      color: #92400E;
+      border-left: 3px solid #F59E0B;
+    }
+    .cal-event.real.tbd {
+      background: #1E3A5F;
+      color: #93C5FD;
+      border-left: 3px solid #60A5FA;
+    }
+    .cal-event.busy-badge::after {
+      content: "BUSY";
+      font-size: 0.55rem;
+      background: #DC2626;
+      color: white;
+      border-radius: 3px;
+      padding: 0 3px;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    /* ── Event detail popup ── */
+    .event-detail {
+      background: white;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 8px 32px rgba(0,0,0,.15);
+      padding: 16px;
+      max-width: 300px;
+      font-size: 0.875rem;
+    }
+    .event-detail h3 { font-size: 1rem; font-weight: 700; margin-bottom: 10px; }
+    .event-detail-row { display:flex; gap:8px; margin-bottom:6px; color: var(--sub); align-items:flex-start; }
+    .event-detail-row .lbl { font-weight:600; color: var(--text); min-width:70px; flex-shrink:0; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .badge.green  { background: var(--green-lt); color: var(--green); }
+    .badge.red    { background: var(--red-lt);   color: var(--red); }
+    .badge.yellow { background: var(--gold-lt);  color: var(--gold); }
+    .badge.blue   { background: var(--blue-lt);  color: var(--blue); }
+
+    /* ── Flow diagram ── */
+    .flow {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 8px 0;
+    }
+    .flow-step {
+      background: white;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+      min-width: 110px;
+      position: relative;
+    }
+    .flow-step .step-icon { font-size: 1.4rem; display: block; margin-bottom: 4px; }
+    .flow-arrow {
+      font-size: 1.2rem;
+      color: var(--gray);
+      padding: 0 4px;
+      flex-shrink: 0;
+    }
+    .flow-step.highlight {
+      border-color: var(--blue);
+      background: var(--blue-lt);
+      color: var(--blue);
+    }
+
+    /* ── iPhone mockup ── */
+    .phone-wrap {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .phone {
+      width: 200px;
+    }
+    .phone-label {
+      text-align: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--gray);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .phone-frame {
+      background: #1C1C1E;
+      border-radius: 36px;
+      padding: 14px 8px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.3);
+    }
+    .phone-screen {
+      background: white;
+      border-radius: 26px;
+      overflow: hidden;
+      min-height: 380px;
+    }
+    .phone-status {
+      background: white;
+      padding: 8px 14px 4px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.6rem;
+      font-weight: 700;
+      color: #111;
+    }
+    .phone-cal-header {
+      padding: 4px 14px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .phone-cal-header .month { font-size: 1rem; font-weight: 800; }
+    .phone-cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 1px;
+      padding: 4px 8px;
+    }
+    .phone-day {
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6rem;
+      font-weight: 600;
+      border-radius: 50%;
+      position: relative;
+    }
+    .phone-day.has-event::after {
+      content: '';
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: #3B82F6;
+      position: absolute;
+      bottom: 1px;
+    }
+    .phone-day.has-event.busy::after { background: #052D66; }
+    .phone-day.today-p {
+      background: #1D4ED8;
+      color: white;
+    }
+    .phone-events {
+      padding: 8px 12px;
+    }
+    .phone-event {
+      border-radius: 6px;
+      padding: 6px 8px;
+      margin-bottom: 5px;
+      font-size: 0.62rem;
+    }
+    .phone-event.subscribed-p { background: #DBEAFE; color: #1E40AF; }
+    .phone-event.real-p       { background: #052D66; color: white; }
+    .phone-event .pe-title    { font-weight: 700; }
+    .phone-event .pe-time     { opacity: 0.8; margin-top: 1px; }
+    .phone-event .pe-busy     {
+      display: inline-block;
+      background: #DC2626;
+      color: white;
+      border-radius: 3px;
+      padding: 0 3px;
+      font-size: 0.55rem;
+      margin-top: 2px;
+    }
+
+    /* ── Focus mode panel ── */
+    .focus-demo {
+      background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
+      border-radius: 16px;
+      padding: 20px;
+      color: white;
+      max-width: 300px;
+      margin: 0 auto;
+    }
+    .focus-header { font-size: 0.65rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .focus-mode-name { font-size: 1.2rem; font-weight: 800; margin-bottom: 12px; }
+    .focus-event {
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.75rem;
+      margin-bottom: 8px;
+    }
+    .focus-event .fe-title { font-weight: 700; font-size: 0.85rem; }
+    .focus-event .fe-time  { opacity: 0.7; margin-top: 2px; }
+    .focus-trigger {
+      background: rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    /* ── View switching ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Tooltip-style callout ── */
+    .callout {
+      background: #FFFBEB;
+      border: 1px solid #FDE68A;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 0.85rem;
+      color: #92400E;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-top: 16px;
+    }
+    .callout .ci { flex-shrink: 0; font-size: 1.1rem; }
+
+    /* ── Divider ── */
+    hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+    max-w { max-width: 900px; display: block; margin: 0 auto; }
+  </style>
+</head>
+<body>
+
+<max-w>
+
+  <!-- Header -->
+  <div class="header">
+    <h1>🦊 Cruzeiro Calendar</h1>
+    <p>Two ways to get games in your calendar — and why one is better</p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="showView('compare')">Comparison</button>
+    <button class="tab" onclick="showView('calendar')">Mac Calendar View</button>
+    <button class="tab" onclick="showView('iphone')">iPhone View</button>
+    <button class="tab" onclick="showView('focus')">Focus Mode</button>
+    <button class="tab" onclick="showView('flow')">How It Works</button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       VIEW 1 — COMPARISON
+  ══════════════════════════════════════════════ -->
+  <div class="view active" id="view-compare">
+
+    <div class="compare-grid">
+
+      <!-- Current -->
+      <div class="compare-card current">
+        <div class="compare-head">
+          <span>📡</span> Option A — Subscribe to .ics URL
+          <span class="badge red" style="margin-left:auto">Current</span>
+        </div>
+        <div class="compare-rows">
+          <div class="compare-row"><span class="icon">✅</span><span>Games appear on your calendar</span></div>
+          <div class="compare-row"><span class="icon">✅</span><span>Auto-updates (iCloud syncs the subscription)</span></div>
+          <div class="compare-row"><span class="icon">✅</span><span>Works on iPhone via iCloud</span></div>
+          <div class="compare-row"><span class="icon">❌</span><span>You are <strong>NOT marked as busy</strong> — anyone checking your availability sees you as free</span></div>
+          <div class="compare-row"><span class="icon">❌</span><span>iPhone <strong>Focus modes cannot trigger</strong> from these events</span></div>
+          <div class="compare-row"><span class="icon">❌</span><span>Events are <strong>read-only</strong> — can't add a note or change color</span></div>
+          <div class="compare-row"><span class="icon">❌</span><span>No availability in shared calendars or <em>Find a Time</em></span></div>
+        </div>
+      </div>
+
+      <!-- New -->
+      <div class="compare-card new">
+        <div class="compare-head">
+          <span>📅</span> Option B — Write as Real Events (AppleScript)
+          <span class="badge green" style="margin-left:auto">Proposed</span>
+        </div>
+        <div class="compare-rows">
+          <div class="compare-row"><span class="icon">✅</span><span>Games appear on your calendar</span></div>
+          <div class="compare-row"><span class="icon">✅</span><span>Auto-updates every 6 hours via LaunchAgent</span></div>
+          <div class="compare-row"><span class="icon">✅</span><span>Syncs to iPhone via iCloud like any regular event</span></div>
+          <div class="compare-row"><span class="icon">✅</span><span>You are <strong>marked as BUSY</strong> during every game</span></div>
+          <div class="compare-row"><span class="icon">✅</span><span>iPhone <strong>Focus modes work</strong> — e.g. silence notifications during games</span></div>
+          <div class="compare-row"><span class="icon">✅</span><span>Events are <strong>editable</strong> — add notes, change alerts, RSVP</span></div>
+          <div class="compare-row"><span class="icon">✅</span><span>Shows as busy in shared calendars &amp; <em>Find a Time</em></span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="callout">
+      <span class="ci">💡</span>
+      <span>Option B keeps the same automation — the script still runs every 6 hours, fetches CBF + ESPN, and updates the events. It just writes them as <strong>real calendar entries</strong> on a dedicated "🦊 Cruzeiro" calendar you own, instead of a read-only subscription.</span>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       VIEW 2 — MAC CALENDAR
+  ══════════════════════════════════════════════ -->
+  <div class="view" id="view-calendar">
+
+    <p class="section-title">Side-by-side: what the events look like in Apple Calendar (May 2026)</p>
+
+    <div class="compare-grid" style="margin-bottom:16px;">
+
+      <div class="card">
+        <div class="card-header" style="background:#EFF6FF; color:#1E40AF;">
+          📡 Option A — Subscribed (read-only)
+        </div>
+        <div class="card-body" style="padding:10px;">
+          <div class="cal-event subscribed">🦊 Cruzeiro vs Atlético-MG</div>
+          <div class="cal-event subscribed tbd">🦊 Cruzeiro @ Internacional · TBD</div>
+          <div class="cal-event subscribed">🦊 Cruzeiro vs Fluminense</div>
+          <br/>
+          <div style="font-size:0.75rem; color:var(--gray); margin-top:4px;">
+            ⚬ Blue dot = subscribed calendar<br/>
+            ⚬ Events are grayed/locked — can't edit<br/>
+            ⚬ No "Busy" indicator anywhere
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header" style="background:#ECFDF5; color:#065F46;">
+          📅 Option B — Real Events (editable + busy)
+        </div>
+        <div class="card-body" style="padding:10px;">
+          <div class="cal-event real busy-badge">🦊 Cruzeiro vs Atlético-MG</div>
+          <div class="cal-event real tbd">🦊 Cruzeiro @ Internacional · TBD</div>
+          <div class="cal-event real busy-badge">🦊 Cruzeiro vs Fluminense</div>
+          <br/>
+          <div style="font-size:0.75rem; color:var(--gray); margin-top:4px;">
+            ⚬ Dark navy = your own "Cruzeiro" calendar<br/>
+            ⚬ Click any event to edit, add alerts, notes<br/>
+            ⚬ BUSY badge shows in availability views
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Fake calendar -->
+    <div class="cal-chrome">
+      <div class="cal-titlebar">
+        <div class="cal-dot r"></div>
+        <div class="cal-dot y"></div>
+        <div class="cal-dot g"></div>
+        <div class="cal-title-text">Calendar — May 2026</div>
+      </div>
+      <div class="cal-toolbar">
+        <div class="cal-toolbar-month">May 2026</div>
+        <div class="cal-toolbar-right">
+          <button class="cal-btn">Month</button>
+          <button class="cal-btn">Week</button>
+          <button class="cal-btn">Day</button>
+        </div>
+      </div>
+      <div class="cal-week-header">
+        <div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div>
+      </div>
+      <div class="cal-grid">
+        <!-- Row 1: Apr 26 – May 2 -->
+        <div class="cal-day other-month"><div class="day-num">26</div></div>
+        <div class="cal-day other-month"><div class="day-num">27</div></div>
+        <div class="cal-day other-month"><div class="day-num">28</div>
+          <div class="cal-event real busy-badge">🦊 vs Boca 21:30</div>
+        </div>
+        <div class="cal-day other-month"><div class="day-num">29</div></div>
+        <div class="cal-day other-month"><div class="day-num">30</div></div>
+        <div class="cal-day other-month"><div class="day-num">1</div></div>
+        <div class="cal-day"><div class="day-num">2</div>
+          <div class="cal-event real busy-badge">🦊 vs Atlético 22:00</div>
+        </div>
+
+        <!-- Row 2: May 3–9 -->
+        <div class="cal-day"><div class="day-num">3</div></div>
+        <div class="cal-day"><div class="day-num">4</div></div>
+        <div class="cal-day"><div class="day-num">5</div></div>
+        <div class="cal-day"><div class="day-num">6</div>
+          <div class="cal-event real busy-badge">🦊 @ U. Católica 00:00</div>
+        </div>
+        <div class="cal-day"><div class="day-num">7</div></div>
+        <div class="cal-day"><div class="day-num">8</div></div>
+        <div class="cal-day"><div class="day-num">9</div>
+          <div class="cal-event real busy-badge">🦊 @ Bahia 22:00</div>
+        </div>
+
+        <!-- Row 3: May 10–16 -->
+        <div class="cal-day"><div class="day-num">10</div></div>
+        <div class="cal-day"><div class="day-num">11</div></div>
+        <div class="cal-day"><div class="day-num">12</div>
+          <div class="cal-event real busy-badge">🦊 vs Goiás 22:30</div>
+        </div>
+        <div class="cal-day"><div class="day-num">13</div></div>
+        <div class="cal-day"><div class="day-num">14</div></div>
+        <div class="cal-day"><div class="day-num">15</div></div>
+        <div class="cal-day"><div class="day-num">16</div>
+          <div class="cal-event real busy-badge">🦊 @ Palmeiras 22:00</div>
+        </div>
+
+        <!-- Row 4: May 17–23 -->
+        <div class="cal-day"><div class="day-num">17</div></div>
+        <div class="cal-day"><div class="day-num">18</div></div>
+        <div class="cal-day"><div class="day-num">19</div>
+          <div class="cal-event real busy-badge">🦊 @ Boca 22:30</div>
+        </div>
+        <div class="cal-day"><div class="day-num">20</div></div>
+        <div class="cal-day"><div class="day-num">21</div></div>
+        <div class="cal-day"><div class="day-num">22</div></div>
+        <div class="cal-day"><div class="day-num">23</div></div>
+
+        <!-- Row 5: May 24–30 -->
+        <div class="cal-day"><div class="day-num">24</div>
+          <div class="cal-event real busy-badge">🦊 vs Chapecoense 17:00</div>
+        </div>
+        <div class="cal-day"><div class="day-num">25</div></div>
+        <div class="cal-day"><div class="day-num">26</div></div>
+        <div class="cal-day"><div class="day-num">27</div></div>
+        <div class="cal-day"><div class="day-num">28</div>
+          <div class="cal-event real busy-badge">🦊 vs Barcelona SC 22:30</div>
+        </div>
+        <div class="cal-day"><div class="day-num">29</div></div>
+        <div class="cal-day"><div class="day-num">30</div>
+          <div class="cal-event real tbd">🦊 vs Fluminense · TBD</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:16px;">
+      <span class="ci">🔵</span>
+      <span>TBD games (no confirmed kickoff) appear as <strong>all-day events</strong> — still real events, still mark you busy all day, and update to a timed event automatically once CBF publishes the schedule.</span>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       VIEW 3 — IPHONE
+  ══════════════════════════════════════════════ -->
+  <div class="view" id="view-iphone">
+
+    <p class="section-title">iPhone — what you see on game day</p>
+
+    <div class="phone-wrap">
+
+      <!-- Phone A: subscribed -->
+      <div class="phone">
+        <div class="phone-label">📡 Option A (current)</div>
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <div class="phone-status">
+              <span>9:41</span><span>●●●</span>
+            </div>
+            <div class="phone-cal-header">
+              <div class="month">May 2026</div>
+            </div>
+            <div class="phone-cal-grid">
+              <div style="font-size:0.55rem;font-weight:700;color:#aaa;text-align:center;padding:2px 0;">S</div>
+              <div style="font-size:0.55rem;font-weight:700;color:#aaa;text-align:center;padding:2px 0;">M</div>
+              <div style="font-size:0.55rem;font-weight:700;color:#aaa;text-align:center;padding:2px 0;">T</div>
+              <div style="font-size:0.55rem;font-weight:700;color:#aaa;text-align:center;padding:2px 0;">W</div>
+              <div style="font-size:0.55rem;font-weight:700;color:#aaa;text-align:center;padding:2px 0;">T</div>
+              <div style="font-size:0.55rem;font-weight:700;color:#aaa;text-align:center;padding:2px 0;">F</div>
+              <div style="font-size:0.55rem;font-weight:700;color:#aaa;text-align:center;padding:2px 0;">S</div>
+              <div class="phone-day"></div>
+              <div class="phone-day"></div>
+              <div class="phone-day"></div>
+              <div class="phone-day"></div>
+              <div class="phone-day"></div>
+              <div class="phone-day"></div>
+              <div class="phone-day">2</div>
+              <div class="phone-day has-event">3</div>
+              <div class="phone-day">4</div>
+              <div class="phone-day">5</div>
+              <div class="phone-day has-event">6</div>
+              <div class="phone-day">7</div>
+              <div class="phone-day">8</div>
+              <div class="phone-day has-event">9</div>
+              <div class="phone-day">10</div>
+              <div class="phone-day">11</div>
+              <div class="phone-day has-event">12</div>
+              <div class="phone-day">13</div>
+              <div class="phone-day">14</div>
+              <div class="phone-day">15</div>
+              <div class="phone-day">16</div>
+            </div>
+            <hr style="border-color:#eee; margin:4px 12px;"/>
+            <div class="phone-events">
+              <div class="phone-event subscribed-p">
+                <div class="pe-title">🦊 Cruzeiro vs Atlético-MG</div>
+                <div class="pe-time">22:00 BRT · Mineirão</div>
+                <div style="font-size:0.58rem; color:#6B7280; margin-top:3px;">📡 Subscribed · read-only</div>
+              </div>
+              <div style="font-size:0.65rem; color:#DC2626; padding:4px 2px; font-weight:600;">
+                ⚠️ No "Busy" — you appear FREE
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phone B: real events -->
+      <div class="phone">
+        <div class="phone-label">📅 Option B (proposed)</div>
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <div class="phone-status">
+              <span>9:41</span><span>●●●</span>
+            </div>
+            <div class="phone-cal-header">
+              <div class="month">May 2026</div>
+            </div>
+            <div class="phone-cal-grid">
+              <div style="font-size:0.55rem;font-weight:700;color:#aaa;text-align:center;padding:2px 0;">S</div>
+              <div style="font-size:0.55rem;font-weight:700;color:#aaa;text-align:center;padding:2px 0;">M</div>
+              <div style="font-size:0.55rem;font-weight:700;color:#aaa;text-align:center;padding:2px 0;">T</div>
+              <div style="font-size:0.55rem;font-weight:700;color:#aaa;text-align:center;padding:2px 0;">W</div>
+              <div style="font-size:0.55rem;font-weight:700;color:#aaa;text-align:center;padding:2px 0;">T</div>
+              <div style="font-size:0.55rem;font-weight:700;color:#aaa;text-align:center;padding:2px 0;">F</div>
+              <div style="font-size:0.55rem;font-weight:700;color:#aaa;text-align:center;padding:2px 0;">S</div>
+              <div class="phone-day"></div>
+              <div class="phone-day"></div>
+              <div class="phone-day"></div>
+              <div class="phone-day"></div>
+              <div class="phone-day"></div>
+              <div class="phone-day"></div>
+              <div class="phone-day">2</div>
+              <div class="phone-day has-event busy">3</div>
+              <div class="phone-day">4</div>
+              <div class="phone-day">5</div>
+              <div class="phone-day has-event busy">6</div>
+              <div class="phone-day">7</div>
+              <div class="phone-day">8</div>
+              <div class="phone-day has-event busy">9</div>
+              <div class="phone-day">10</div>
+              <div class="phone-day">11</div>
+              <div class="phone-day has-event busy">12</div>
+              <div class="phone-day">13</div>
+              <div class="phone-day">14</div>
+              <div class="phone-day">15</div>
+              <div class="phone-day">16</div>
+            </div>
+            <hr style="border-color:#eee; margin:4px 12px;"/>
+            <div class="phone-events">
+              <div class="phone-event real-p">
+                <div class="pe-title">🦊 Cruzeiro vs Atlético-MG</div>
+                <div class="pe-time">22:00 BRT · Mineirão</div>
+                <span class="pe-busy">BUSY</span>
+              </div>
+              <div style="font-size:0.65rem; color:#059669; padding:4px 2px; font-weight:600;">
+                ✅ Marked BUSY · editable · Focus-ready
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       VIEW 4 — FOCUS MODE
+  ══════════════════════════════════════════════ -->
+  <div class="view" id="view-focus">
+
+    <p class="section-title">iPhone Focus Mode — silence notifications during games automatically</p>
+
+    <div style="display:flex; gap:24px; flex-wrap:wrap; justify-content:center; align-items:flex-start;">
+
+      <div class="focus-demo">
+        <div class="focus-header">Focus · Active now</div>
+        <div class="focus-mode-name">⚽ Game Time</div>
+        <div class="focus-event">
+          <div class="fe-title">🦊 Cruzeiro vs Atlético-MG</div>
+          <div class="fe-time">Tonight · 22:00–00:00 BRT</div>
+        </div>
+        <div style="font-size:0.7rem; opacity:0.8; margin-bottom:6px;">Notifications silenced. Calls from favourites still allowed.</div>
+        <div class="focus-trigger">
+          <span>🔔</span>
+          <span>Triggered automatically when calendar event starts</span>
+        </div>
+      </div>
+
+      <div style="max-width:280px;">
+        <div class="card">
+          <div class="card-header">How to set it up (one time)</div>
+          <div class="card-body" style="font-size:0.85rem; color:var(--sub); line-height:1.7;">
+            <ol style="padding-left:18px;">
+              <li>iPhone → <strong>Settings → Focus</strong></li>
+              <li>Tap <strong>+</strong> → create "Game Time" focus</li>
+              <li>Under <em>Turn On Automatically</em> → <strong>Add Schedule</strong></li>
+              <li>Choose <strong>"When a Calendar Event Matches"</strong></li>
+              <li>Filter by calendar: <strong>🦊 Cruzeiro</strong></li>
+              <li>Done — it activates itself every game night</li>
+            </ol>
+            <div class="callout" style="margin-top:12px; font-size:0.8rem;">
+              <span class="ci">⚠️</span>
+              <span>This only works with <strong>real events</strong> (Option B). Subscribed calendars are invisible to Focus mode triggers.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       VIEW 5 — FLOW
+  ══════════════════════════════════════════════ -->
+  <div class="view" id="view-flow">
+
+    <p class="section-title">How Option B works — the full automation loop</p>
+
+    <div class="card">
+      <div class="card-header">Every 6 hours (macOS LaunchAgent)</div>
+      <div class="card-body">
+
+        <div class="flow">
+          <div class="flow-step">
+            <span class="step-icon">📄</span>
+            CBF PDF<br/><small style="font-weight:400;color:var(--gray);">Brasileirão times</small>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <span class="step-icon">📡</span>
+            ESPN API<br/><small style="font-weight:400;color:var(--gray);">Libertadores + Copa</small>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step highlight">
+            <span class="step-icon">🐍</span>
+            Python script<br/><small style="font-weight:400;color:var(--blue);">cruzeiro_calendar.py</small>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step highlight">
+            <span class="step-icon">📜</span>
+            AppleScript<br/><small style="font-weight:400;color:var(--blue);">writes to Calendar.app</small>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <span class="step-icon">🖥️</span>
+            Mac Calendar<br/><small style="font-weight:400;color:var(--gray);">🦊 Cruzeiro calendar</small>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <span class="step-icon">☁️</span>
+            iCloud sync<br/><small style="font-weight:400;color:var(--gray);">automatic</small>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <span class="step-icon">📱</span>
+            iPhone<br/><small style="font-weight:400;color:var(--gray);">real events, busy</small>
+          </div>
+        </div>
+
+        <hr/>
+
+        <p class="section-title" style="margin-top:0;">What the script does each run</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="compare-row" style="padding:0;"><span class="icon">🗑️</span><span><strong>Deletes</strong> all existing events on the "🦊 Cruzeiro" calendar (so stale games don't pile up)</span></div>
+          <div class="compare-row" style="padding:0;"><span class="icon">➕</span><span><strong>Re-adds</strong> every upcoming fixture with up-to-date times from CBF + ESPN</span></div>
+          <div class="compare-row" style="padding:0;"><span class="icon">🕐</span><span>TBD games become <strong>all-day events</strong> — promoted to timed events once CBF confirms</span></div>
+          <div class="compare-row" style="padding:0;"><span class="icon">📲</span><span>iCloud picks up the change and <strong>pushes to iPhone</strong> within minutes</span></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="callout">
+      <span class="ci">🔒</span>
+      <span>Everything stays <strong>100% local</strong>. No cloud service, no API keys for calendar access. The Python script talks to Calendar.app directly via AppleScript — the same way you'd drag an event yourself.</span>
+    </div>
+
+  </div>
+
+</max-w>
+
+<script>
+  function showView(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('view-' + name).classList.add('active');
+    event.target.classList.add('active');
+  }
+</script>
+</body>
+</html>

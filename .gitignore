@@ -1,0 +1,29 @@
+# Compiled Swift binary (each user compiles their own)
+update_calendar
+
+# Runtime state & logs
+*.log
+calendar_state.json
+calendar_changes.json
+cbf_pdf_url.txt
+last_tennis_furia_daily.txt
+
+# Generated HTML dashboards (rebuilt on each run)
+fonseca.html
+cruzeiro_results.html
+furia_results.html
+calendar_changelog.html
+
+# ICS output
+cruzeiro.ics
+
+# Claude Code
+.claude/
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
