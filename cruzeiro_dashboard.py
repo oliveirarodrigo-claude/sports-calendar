@@ -103,6 +103,35 @@ def fetch_cruzeiro_games():
     return games
 
 
+def _nav(active: str) -> str:
+    items = [
+        ("/cruzeiro_results.html",  "⚽️ Cruzeiro"),
+        ("/fonseca.html",           "🎾 Fonseca"),
+        ("/furia_results.html",     "🎮 FURIA"),
+        ("/calendar_changelog.html","📋 Activity"),
+        ("/changelog.html",         "🛠 Changelog"),
+    ]
+    links = "".join(
+        f'<a href="{h}" class="nv{" nv-on" if h == active else ""}">{l}</a>'
+        for h, l in items
+    )
+    return (
+        '<nav class="topnav">'
+        '<a href="/" class="nav-home" title="Hub">🦊</a>'
+        f'<div class="nav-links">{links}</div>'
+        '</nav>'
+        '<style>'
+        '.topnav{background:#161a23;border-bottom:1px solid #232736;padding:0 20px;'
+        'display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;min-height:48px}'
+        '.nav-home{font-size:20px;text-decoration:none;flex-shrink:0}'
+        '.nav-links{display:flex;gap:2px;flex-wrap:wrap}'
+        '.nv{font-size:12.5px;font-weight:500;color:#7b82a0;text-decoration:none;'
+        'padding:6px 11px;border-radius:6px;white-space:nowrap;transition:background .15s,color .15s}'
+        '.nv:hover,.nv-on{background:#232736;color:#e2e6f3}'
+        '</style>'
+    )
+
+
 def build_html(games) -> str:
     now_utc  = datetime.now(timezone.utc)
     past     = [g for g in games if g["completed"]]
@@ -205,6 +234,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;back
 </style>
 </head>
 <body>
+{_nav("/cruzeiro_results.html")}
 <div class="wrap">
 <div class="hdr"><h1>⚽️ Cruzeiro EC</h1><div class="sub">2026 Season</div></div>
 <div class="stats">

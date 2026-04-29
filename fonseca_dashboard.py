@@ -32,7 +32,6 @@ def _extract_score(note_text: str) -> str:
     """Pull just the set scores from the ESPN notes string."""
     if not note_text:
         return ""
-    # Score is everything after the last country code in parentheses, e.g. "(BRA) 6-4 2-6 7-5"
     m = re.search(r'\([A-Z]{2,3}\)\s+([\d\s()\-/w]+)$', note_text.strip())
     return m.group(1).strip() if m else ""
 
@@ -46,6 +45,35 @@ def _tournament_short(name: str) -> str:
     for old, new in replacements.items():
         name = name.replace(old, new)
     return name.strip()
+
+
+def _nav(active: str) -> str:
+    items = [
+        ("/cruzeiro_results.html",   "⚽️ Cruzeiro"),
+        ("/fonseca.html",            "🎾 Fonseca"),
+        ("/furia_results.html",      "🎮 FURIA"),
+        ("/calendar_changelog.html", "📋 Activity"),
+        ("/changelog.html",          "🛠 Changelog"),
+    ]
+    links = "".join(
+        f'<a href="{h}" class="nv{" nv-on" if h == active else ""}">{l}</a>'
+        for h, l in items
+    )
+    return (
+        '<nav class="topnav">'
+        '<a href="/" class="nav-home" title="Hub">🦊</a>'
+        f'<div class="nav-links">{links}</div>'
+        '</nav>'
+        '<style>'
+        '.topnav{background:#161a23;border-bottom:1px solid #232736;padding:0 20px;'
+        'display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;min-height:48px}'
+        '.nav-home{font-size:20px;text-decoration:none;flex-shrink:0}'
+        '.nav-links{display:flex;gap:2px;flex-wrap:wrap}'
+        '.nv{font-size:12.5px;font-weight:500;color:#7b82a0;text-decoration:none;'
+        'padding:6px 11px;border-radius:6px;white-space:nowrap;transition:background .15s,color .15s}'
+        '.nv:hover,.nv-on{background:#232736;color:#e2e6f3}'
+        '</style>'
+    )
 
 
 # ── data fetch ────────────────────────────────────────────────────────────────
@@ -91,7 +119,6 @@ def fetch_all_matches():
             score     = _extract_score(note_text)
 
             opp_name  = opponent.get("name", "?")
-            # Extract seeding from note if present, e.g. "(3) Joao" or "(16) Karen"
             opp_seed_m = re.search(rf'\((\d+)\)\s+{re.escape(opp_name.split()[0])}', note_text)
             opp_seed   = opp_seed_m.group(1) if opp_seed_m else ""
 
@@ -269,8 +296,8 @@ def build_html(matches) -> str:
     }}
     .card:hover {{ border-color: #4a5568; }}
 
-    .card.win    {{ border-left: 4px solid #48bb78; }}
-    .card.loss   {{ border-left: 4px solid #fc8181; }}
+    .card.win      {{ border-left: 4px solid #48bb78; }}
+    .card.loss     {{ border-left: 4px solid #fc8181; }}
     .card.walkover {{ border-left: 4px solid #4a5568; }}
     .card.upcoming {{ border-left: 4px solid #63b3ed; background: #1a2234; }}
 
@@ -353,6 +380,7 @@ def build_html(matches) -> str:
   </style>
 </head>
 <body>
+{_nav("/fonseca.html")}
   <div class="container">
 
     <div class="header">
@@ -404,6 +432,7 @@ def build_fonseca_html():
         print("  ⚠️  No match data returned", file=sys.stderr)
         return
     html = build_html(matches)
+    OUTPUT_HTML.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_HTML.write_text(html, encoding="utf-8")
     past     = sum(1 for m in matches if not m["upcoming"])
     upcoming = sum(1 for m in matches if m["upcoming"])

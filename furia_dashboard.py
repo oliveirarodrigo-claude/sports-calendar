@@ -231,6 +231,35 @@ def fetch_furia_matches():
     return matches
 
 
+def _nav(active: str) -> str:
+    items = [
+        ("/cruzeiro_results.html",  "⚽️ Cruzeiro"),
+        ("/fonseca.html",           "🎾 Fonseca"),
+        ("/furia_results.html",     "🎮 FURIA"),
+        ("/calendar_changelog.html","📋 Activity"),
+        ("/changelog.html",         "🛠 Changelog"),
+    ]
+    links = "".join(
+        f'<a href="{h}" class="nv{" nv-on" if h == active else ""}">{l}</a>'
+        for h, l in items
+    )
+    return (
+        '<nav class="topnav">'
+        '<a href="/" class="nav-home" title="Hub">🦊</a>'
+        f'<div class="nav-links">{links}</div>'
+        '</nav>'
+        '<style>'
+        '.topnav{background:#161a23;border-bottom:1px solid #232736;padding:0 20px;'
+        'display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;min-height:48px}'
+        '.nav-home{font-size:20px;text-decoration:none;flex-shrink:0}'
+        '.nav-links{display:flex;gap:2px;flex-wrap:wrap}'
+        '.nv{font-size:12.5px;font-weight:500;color:#7b82a0;text-decoration:none;'
+        'padding:6px 11px;border-radius:6px;white-space:nowrap;transition:background .15s,color .15s}'
+        '.nv:hover,.nv-on{background:#232736;color:#e2e6f3}'
+        '</style>'
+    )
+
+
 def build_html(matches) -> str:
     past     = [m for m in matches if m["completed"]]
     upcoming = [m for m in matches if m["upcoming"]]
@@ -241,8 +270,8 @@ def build_html(matches) -> str:
     generated  = datetime.now(BRT).strftime("%b %d, %Y · %H:%M BRT")
 
     def match_card(m):
-        brt_dt   = m["dt"].astimezone(BRT)
-        date_str = brt_dt.strftime("%b %d")
+        brt_dt   = m["dt"].astimezone(BRT) if m["dt"] else None
+        date_str = brt_dt.strftime("%b %d") if brt_dt else "—"
         bo_html  = f' <span class="rnd">· Bo{m["bo"]}</span>' if m["bo"] else ""
 
         if m["completed"]:
@@ -258,7 +287,7 @@ def build_html(matches) -> str:
         else:
             badge_cls, card_cls, badge_text = "bu", "cu", "Next"
             score_html = ""
-            t = brt_dt.strftime("%H:%M")
+            t = brt_dt.strftime("%H:%M") if brt_dt else "TBD"
             time_html  = f'<div class="ct">{t}<br>BRT</div>'
 
         return (f'<div class="card {card_cls}">'
@@ -329,6 +358,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;back
 </style>
 </head>
 <body>
+{_nav("/furia_results.html")}
 <div class="wrap">
 <div class="hdr"><h1>🎮 FURIA CS2</h1><div class="sub">2026 Season</div></div>
 <div class="stats">

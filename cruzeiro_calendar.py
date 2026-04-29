@@ -1039,6 +1039,33 @@ def _generate_changelog_html() -> None:
     updated = datetime.now(timezone.utc).astimezone(BRT).strftime("%b %d, %Y · %H:%M BRT")
     empty   = '<div class="empty">No changes recorded yet.</div>' if not all_changes else sections
 
+    _nav_items = [
+        ("/cruzeiro_results.html",   "⚽️ Cruzeiro"),
+        ("/fonseca.html",            "🎾 Fonseca"),
+        ("/furia_results.html",      "🎮 FURIA"),
+        ("/calendar_changelog.html", "📋 Activity"),
+        ("/changelog.html",          "🛠 Changelog"),
+    ]
+    _nav_links = "".join(
+        f'<a href="{h}" class="nv{" nv-on" if h == "/calendar_changelog.html" else ""}">{l}</a>'
+        for h, l in _nav_items
+    )
+    _nav_html = (
+        '<nav class="topnav">'
+        '<a href="/" class="nav-home" title="Hub">🦊</a>'
+        f'<div class="nav-links">{_nav_links}</div>'
+        '</nav>'
+        '<style>'
+        '.topnav{background:#161a23;border-bottom:1px solid #232736;padding:0 20px;'
+        'display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;min-height:48px}'
+        '.nav-home{font-size:20px;text-decoration:none;flex-shrink:0}'
+        '.nav-links{display:flex;gap:2px;flex-wrap:wrap}'
+        '.nv{font-size:12.5px;font-weight:500;color:#7b82a0;text-decoration:none;'
+        'padding:6px 11px;border-radius:6px;white-space:nowrap;transition:background .15s,color .15s}'
+        '.nv:hover,.nv-on{background:#232736;color:#e2e6f3}'
+        '</style>'
+    )
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1093,6 +1120,7 @@ body{{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSy
 </style>
 </head>
 <body>
+{_nav_html}
 <div class="hdr">
   <h1>📋 Calendar Activity</h1>
   <p>Every change to your Sports on TV calendar — reschedules, confirmations, new games, and removals.</p>

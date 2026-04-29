@@ -26,8 +26,16 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 0 24px;
+}
+.hub-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
   justify-content: center;
-  padding: 48px 24px;
+  width: 100%;
+  padding: 48px 0 48px;
 }
 
 .logo { font-size: 40px; margin-bottom: 12px; }
@@ -73,9 +81,31 @@ a.card:hover {
   color: var(--muted);
 }
 </style>
+<style>
+.topnav{background:#161a23;border-bottom:1px solid #232736;padding:0 20px;
+display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;min-height:48px;
+width:calc(100% + 48px);margin:0 -24px}
+.nav-home{font-size:20px;text-decoration:none;flex-shrink:0}
+.nav-links{display:flex;gap:2px;flex-wrap:wrap}
+.nv{font-size:12.5px;font-weight:500;color:#7b82a0;text-decoration:none;
+padding:6px 11px;border-radius:6px;white-space:nowrap;transition:background .15s,color .15s}
+.nv:hover{background:#232736;color:#e2e6f3}
+</style>
 </head>
 <body>
 
+<nav class="topnav">
+  <a href="/" class="nav-home" title="Hub">🦊</a>
+  <div class="nav-links">
+    <a href="/cruzeiro_results.html" class="nv">⚽️ Cruzeiro</a>
+    <a href="/fonseca.html"          class="nv">🎾 Fonseca</a>
+    <a href="/furia_results.html"    class="nv">🎮 FURIA</a>
+    <a href="/calendar_changelog.html" class="nv">📋 Activity</a>
+    <a href="/changelog.html"        class="nv">🛠 Changelog</a>
+  </div>
+</nav>
+
+<div class="hub-content">
 <div class="logo">🦊</div>
 <h1>Sports Calendar</h1>
 <p class="sub">Cruzeiro · Fonseca · World Cup · FURIA CS2</p>
@@ -115,6 +145,7 @@ a.card:hover {
 </div>
 
 <div class="footer">localhost:8765 · always on</div>
+</div><!-- .hub-content -->
 
 </body>
 </html>
