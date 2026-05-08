@@ -299,6 +299,92 @@ def fetch_espn_scoreboard(league: str) -> list[dict]:
     return games
 
 
+def fetch_cruzeiro_broadcasts() -> dict:
+    """
+    Scrape futebolnatv.com.br for Cruzeiro's upcoming games and their TV channels.
+    Returns a dict keyed by "YYYY-MM-DD" (BRT date) → notes string, e.g.
+      {"2026-05-09": "📺 SporTV e Premiere"}
+    Fails gracefully — returns {} if the site is unreachable.
+    """
+    import re as _re
+    from datetime import date as _date
+
+    URL = "https://www.futebolnatv.com.br/time/cruzeiro-z7cqk51afr/jogos"
+    today_brt = datetime.now(BRT).date()
+
+    try:
+        req = urllib.request.Request(URL, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=12) as r:
+            html = r.read().decode("utf-8", errors="replace")
+    except Exception as e:
+        print(f"  ⚠️  Broadcast info unavailable: {e}", file=sys.stderr)
+        return {}
+
+    result: dict = {}
+
+    # Split into per-day sections by the h3 date headings
+    # Each section looks like: <h3 ...>Amanhã</h3> ... or <h3 ...>Terça, 12/05</h3>
+    sections = _re.split(r'<h3[^>]*>', html)
+
+    for section in sections[1:]:  # skip preamble before first h3
+        # Extract the heading text
+        heading_m = _re.match(r'([^<]+)', section)
+        if not heading_m:
+            continue
+        heading = heading_m.group(1).strip()
+
+        # Parse the date from the heading
+        game_date: _date | None = None
+        if heading.lower() in ("hoje", "today"):
+            game_date = today_brt
+        elif heading.lower() in ("amanhã", "amanha", "tomorrow"):
+            game_date = today_brt + timedelta(days=1)
+        else:
+            # e.g. "Terça, 12/05" or "Sábado, 16/05"
+            dm = _re.search(r'(\d{2})/(\d{2})', heading)
+            if dm:
+                day, month = int(dm.group(1)), int(dm.group(2))
+                year = today_brt.year
+                # If month already passed this year, assume next year
+                if month < today_brt.month or (month == today_brt.month and day < today_brt.day):
+                    year += 1
+                try:
+                    game_date = _date(year, month, day)
+                except ValueError:
+                    continue
+
+        if not game_date:
+            continue
+
+        # Find all channel names in this section
+        # Channel spans: <span class="truncate text-[0.65rem] font-bold uppercase tracking-wide...">SPORTV</span>
+        channels = _re.findall(
+            r'font-bold uppercase tracking-wide[^>]+>\s*([A-Za-z0-9 /+]+?)\s*</span>',
+            section
+        )
+        # Clean up and deduplicate while preserving order
+        seen, unique = set(), []
+        for ch in channels:
+            ch = ch.strip()
+            if ch and ch not in seen:
+                seen.add(ch)
+                unique.append(ch)
+
+        if unique:
+            # Format as "📺 SporTV e Premiere" using "e" between channels
+            if len(unique) == 1:
+                notes = f"📺 {unique[0]}"
+            else:
+                notes = "📺 " + " e ".join(unique)
+            result[game_date.isoformat()] = notes
+
+    if result:
+        print(f"  📺 Broadcast info: {result}")
+    else:
+        print("  📺 No broadcast info found (site may have changed)")
+    return result
+
+
 def fetch_all_fixtures(cbf_schedule: dict) -> list[tuple[dict, dict]]:
     all_fixtures = []
     now_utc = datetime.now(timezone.utc)
@@ -1158,6 +1244,11 @@ def write_to_apple_calendar(
     SWIFT_BINARY = Path.home() / "Library/Application Support/CruzeiroCalendar/update_calendar"
     JSON_TMP     = Path("/tmp/cruzeiro_fixtures.json")
 
+    # Fetch broadcast info once for all fixtures (keyed by BRT date)
+    broadcasts: dict = {}
+    if fixtures:
+        broadcasts = fetch_cruzeiro_broadcasts()
+
     # Build the JSON payload — soccer fixtures first
     payload = []
     for comp, f in fixtures:
@@ -1178,14 +1269,21 @@ def write_to_apple_calendar(
             start = kickoff
             end   = kickoff + timedelta(hours=2)
 
-        payload.append({
-            "title":     title,
-            "start_iso": start.isoformat(),
-            "end_iso":   end.isoformat(),
-            "is_allday": is_tbd,
+        # Look up broadcast info by BRT date
+        brt_date_key = kickoff.astimezone(BRT).strftime("%Y-%m-%d")
+        notes = broadcasts.get(brt_date_key, "")
+
+        event_dict: dict = {
+            "title":        title,
+            "start_iso":    start.isoformat(),
+            "end_iso":      end.isoformat(),
+            "is_allday":    is_tbd,
             # Soccer: TBD → free (no confirmed time), confirmed → busy
             "availability": "free" if is_tbd else "busy",
-        })
+        }
+        if notes:
+            event_dict["notes"] = notes
+        payload.append(event_dict)
 
     # Append tennis events (already fully formed payload dicts)
     for t in (tennis_events or []):
