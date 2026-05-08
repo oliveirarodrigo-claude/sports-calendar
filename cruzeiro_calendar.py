@@ -1233,6 +1233,7 @@ def write_to_apple_calendar(
     tennis_events=None,
     wc_events=None,
     cs2_events=None,
+    cruzeiro_events=None,   # pre-built event dicts (used for broadcast-only refresh)
 ) -> bool:
     """
     Write all fixtures + tennis events to 'Sports on TV' via EventKit (Swift helper).
@@ -1285,6 +1286,11 @@ def write_to_apple_calendar(
             event_dict["notes"] = notes
         payload.append(event_dict)
 
+    # Cruzeiro pre-built events (broadcast-only refresh bypasses fixture parsing)
+    if cruzeiro_events is not None:
+        for ev in cruzeiro_events:
+            payload.append(ev)
+
     # Append tennis events (already fully formed payload dicts)
     for t in (tennis_events or []):
         payload.append(t)
@@ -1301,7 +1307,7 @@ def write_to_apple_calendar(
     # so a fast run (tennis+FURIA only) never touches soccer or WC events.
     delete_prefixes = []
     delete_tags     = []
-    if fixtures:
+    if fixtures or cruzeiro_events is not None:
         delete_prefixes.append("⚽️ 🦊 Cruzeiro")
     if tennis_events is not None:
         delete_prefixes.append("🎾 João Fonseca")
@@ -1367,9 +1373,84 @@ def _update_dashboards(cruzeiro: bool = False, fonseca: bool = False, furia: boo
             print(f"  ⚠️  FURIA dashboard: {e}", file=sys.stderr)
 
 
-# ── Fast update (tennis + FURIA only, runs every 20 min near game time) ───────
+# ── Cruzeiro broadcast refresh (runs inside fast_update, once per day) ────────
 
-DAILY_STATE_FILE = Path.home() / "Library/Application Support/CruzeiroCalendar/last_tennis_furia_daily.txt"
+DAILY_STATE_FILE     = Path.home() / "Library/Application Support/CruzeiroCalendar/last_tennis_furia_daily.txt"
+BROADCAST_STATE_FILE = Path.home() / "Library/Application Support/CruzeiroCalendar/last_broadcast_check.txt"
+
+
+def _check_cruzeiro_broadcast(today, tomorrow) -> None:
+    """
+    Called from fast_update(). Once per day:
+      1. Load saved Cruzeiro events from calendar_state.json
+      2. Check if any are today or tomorrow
+      3. If so, scrape futebolnatv.com.br for broadcast info
+      4. If notes changed (or were missing), re-write Cruzeiro events to calendar
+    """
+    # Only run once per day
+    last_check = BROADCAST_STATE_FILE.read_text().strip() if BROADCAST_STATE_FILE.exists() else ""
+    if last_check == str(today):
+        return
+
+    # Load saved state
+    if not CALENDAR_STATE_FILE.exists():
+        return
+    try:
+        state = json.loads(CALENDAR_STATE_FILE.read_text())
+    except Exception:
+        return
+
+    # Find Cruzeiro events that are today or tomorrow (BRT)
+    cruzeiro_events = [e for e in state if "🦊 Cruzeiro" in e.get("title", "")]
+    upcoming_soon = []
+    for ev in cruzeiro_events:
+        try:
+            ev_date = datetime.fromisoformat(ev["start_iso"]).astimezone(BRT).date()
+            if ev_date in (today, tomorrow):
+                upcoming_soon.append(ev)
+        except Exception:
+            pass
+
+    if not upcoming_soon:
+        return  # No Cruzeiro game today or tomorrow — nothing to check
+
+    print(f"\n  📺 Cruzeiro game in ≤24h — checking broadcast info…")
+
+    broadcasts = fetch_cruzeiro_broadcasts()
+    if not broadcasts:
+        return
+
+    # Update notes on any event whose broadcast info changed
+    changed = False
+    for ev in cruzeiro_events:
+        try:
+            date_key = datetime.fromisoformat(ev["start_iso"]).astimezone(BRT).strftime("%Y-%m-%d")
+        except Exception:
+            continue
+        new_notes = broadcasts.get(date_key, "")
+        if new_notes and new_notes != ev.get("notes", ""):
+            print(f"     📺 Updated: {ev['title']} → {new_notes}")
+            ev["notes"] = new_notes
+            changed = True
+
+    BROADCAST_STATE_FILE.write_text(str(today))
+
+    if not changed:
+        print(f"  ✅ Broadcast info unchanged — no calendar update needed")
+        return
+
+    # Re-write all Cruzeiro events with updated notes (selective: only touches Cruzeiro prefix)
+    print(f"  🔄 Re-writing Cruzeiro events with broadcast notes…")
+    write_to_apple_calendar(
+        fixtures         = [],
+        tennis_events    = None,
+        wc_events        = None,
+        cs2_events       = None,
+        cruzeiro_events  = cruzeiro_events,
+    )
+
+
+# ── Fast update (tennis + FURIA only, runs every 20 min near game time) ───────
 
 def fast_update():
     """
@@ -1420,6 +1501,7 @@ def fast_update():
             wc_events     = None,
             cs2_events    = cs2_events,
         )
+        _check_cruzeiro_broadcast(today, tomorrow)
         return
 
     # No game today or tomorrow — only update once per day
@@ -1445,6 +1527,7 @@ def fast_update():
     DAILY_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     DAILY_STATE_FILE.write_text(str(today))
     _update_dashboards(fonseca=True, furia=True)
+    _check_cruzeiro_broadcast(today, tomorrow)
 
 
 def soccer_update():
