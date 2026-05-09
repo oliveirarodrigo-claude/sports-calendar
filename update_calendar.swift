@@ -85,7 +85,9 @@ var toDelete: [EKEvent] = []
 if !deletePrefixes.isEmpty {
     let pred = store.predicateForEvents(withStart: now, end: oneYr, calendars: [cal])
     let byPrefix = store.events(matching: pred).filter { ev in
-        ev.startDate > now &&
+        // Use endDate so in-progress events can be replaced with updated times,
+        // but truly completed events (endDate < now) are never deleted.
+        ev.endDate > now &&
         deletePrefixes.contains(where: { ev.title.hasPrefix($0) })
     }
     toDelete += byPrefix
@@ -95,7 +97,7 @@ if !deleteTags.isEmpty {
     let pred = store.predicateForEvents(withStart: now, end: twoYr, calendars: [cal])
     let byTag = store.events(matching: pred).filter { ev in
         guard let urlStr = ev.url?.absoluteString else { return false }
-        return ev.startDate > now &&
+        return ev.endDate > now &&
                deleteTags.contains(where: { urlStr == "cruzeiro-calendar://\($0)" })
     }
     toDelete += byTag
