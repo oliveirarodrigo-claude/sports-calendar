@@ -736,24 +736,46 @@ LIQUIPEDIA_API = "https://liquipedia.net/counterstrike/api.php"
 FURIA_LP_PAGE  = "FURIA"
 
 def _lp_fetch(page: str) -> str:
-    """Fetch parsed HTML from Liquipedia for a given wiki page. Returns empty string on error."""
+    """
+    Fetch parsed HTML from Liquipedia for a given wiki page.
+    Retries up to 3 times with exponential backoff on 429.
+    Returns empty string on permanent error.
+    """
+    import time as _time
+    import gzip as _gzip
+    import urllib.error as _ue
+
     url = (f"{LIQUIPEDIA_API}?action=parse&page={urllib.request.quote(page)}"
            f"&prop=text&format=json")
-    try:
-        req = urllib.request.Request(url, headers={
-            "User-Agent": "Mozilla/5.0",
-            "Accept-Encoding": "gzip",
-        })
-        with urllib.request.urlopen(req, timeout=15) as r:
-            raw = r.read()
-            import gzip as _gzip
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept-Encoding": "gzip",
+    }
+
+    for attempt in range(3):
+        if attempt > 0:
+            _time.sleep(attempt * 15)   # 15s, 30s back-off
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=15) as r:
+                raw = r.read()
             try:
                 body = _gzip.decompress(raw)
             except Exception:
                 body = raw
             return json.loads(body).get("parse", {}).get("text", {}).get("*", "")
-    except Exception:
-        return ""
+        except _ue.HTTPError as e:
+            if e.code == 429 and attempt < 2:
+                print(f"  ⏳ Liquipedia rate-limited, retrying in {(attempt+1)*15}s…", file=sys.stderr)
+                continue
+            return ""
+        except Exception:
+            return ""
+    return ""
 
 
 def _lp_upcoming_tournament_pages() -> List[str]:
@@ -783,84 +805,83 @@ def _lp_upcoming_tournament_pages() -> List[str]:
 
 def fetch_furia_cs2() -> List[Dict]:
     """
-    Scrape Liquipedia for confirmed upcoming FURIA CS2 matches (specific time + opponent known).
+    Scrape Liquipedia for confirmed upcoming FURIA CS2 matches.
+    Parses the FURIA main page directly — avoids multi-page crawl and rate-limit 429s.
     Returns calendar-payload dicts. Availability = free (CS2 match times shift occasionally).
     """
-    import gzip as _gzip
     now_ts = int(datetime.now(timezone.utc).timestamp())
 
-    tourney_pages = _lp_upcoming_tournament_pages()
-    if not tourney_pages:
-        print("  ⚠️  FURIA: could not find upcoming tournament pages", file=sys.stderr)
+    html = _lp_fetch(FURIA_LP_PAGE)
+    if not html:
+        print("  ⚠️  FURIA: could not fetch Liquipedia page", file=sys.stderr)
         return []
-
-    print(f"  🎮 Scanning {len(tourney_pages)} tournament(s) for confirmed FURIA matches...")
 
     results: List[Dict] = []
     seen_ts: set = set()
 
-    for page in tourney_pages:
-        html = _lp_fetch(page)
-        if not html:
+    # Scan every data-timestamp on the FURIA page — any that has "FURIA" nearby is a match
+    for m in re.finditer(r'data-timestamp="(\d+)"', html):
+        ts = int(m.group(1))
+        # Keep events up to 4 hours after start (CS2 Bo3 can run long)
+        if ts < now_ts - 4 * 3600 or ts in seen_ts:
             continue
 
-        # Tournament short name from page path (last segment, prettified)
-        tourney_name = page.split("/")[-1].replace("_", " ")
+        # Grab a window around the timestamp tag: look back for row start, forward for row end
+        chunk = html[max(0, m.start() - 500): m.start() + 3000]
+        if "FURIA" not in chunk:
+            continue
 
-        # Find every timestamp that has FURIA in its local context
-        for m in re.finditer(r'data-timestamp="(\d+)"', html):
-            ts = int(m.group(1))
-            # Keep events up to 4 hours after start (CS2 Bo3 can run long)
-            if ts < now_ts - 4 * 3600 or ts in seen_ts:
-                continue
+        # Extract team names — prefer the <a title="..."> inside .name spans
+        # which gives the full team name, not the abbreviation
+        team_entries = re.findall(
+            r'class="name"[^>]*>\s*<a[^>]*title="([^"]+)"[^>]*>([^<]+)</a>',
+            chunk
+        )
+        full_names  = [title for title, _ in team_entries if title]
+        short_names = [text  for _, text  in team_entries if text]
 
-            chunk = html[max(0, m.start() - 100): m.start() + 2500]
-            if "FURIA" not in chunk:
-                continue
+        if not full_names and not short_names:
+            continue
 
-            # Extract team names — prefer the <a title="..."> inside .name spans
-            # which gives the full team name, not the abbreviation
-            team_entries = re.findall(
-                r'class="name"[^>]*>\s*<a[^>]*title="([^"]+)"[^>]*>([^<]+)</a>',
-                chunk
-            )
-            full_names = [title for title, _ in team_entries if title]
-            short_names = [text for _, text in team_entries if text]
+        # Opponent = the non-FURIA team
+        opponent = None
+        pairs = list(zip(
+            full_names  + [""] * max(0, len(short_names) - len(full_names)),
+            short_names + [""] * max(0, len(full_names)  - len(short_names)),
+        ))
+        for full, short in pairs:
+            if full not in ("FURIA", "FURIA Esports") and short not in ("FURIA",):
+                opponent = full or short
+                break
 
-            if not full_names and not short_names:
-                continue
+        # Skip if opponent is still unknown / TBD
+        if not opponent or opponent.upper() in ("TBD", "BYE", ""):
+            continue
 
-            # Opponent = the non-FURIA team
-            opponent = None
-            for full, short in zip(full_names, short_names):
-                if full not in ("FURIA", "FURIA Esports") and short not in ("FURIA",):
-                    opponent = full  # prefer full name
-                    break
+        # Best-of format
+        bo_m = re.search(r'Bo(\d)', chunk, re.IGNORECASE)
+        bo   = f" (Bo{bo_m.group(1)})" if bo_m else ""
 
-            # Skip if opponent is still unknown / TBD
-            if not opponent or opponent.upper() in ("TBD", "BYE", ""):
-                continue
+        # Tournament name — look for league-icon title attribute near this row
+        tourney_m = re.search(r'class="[^"]*league-icon[^"]*"[^>]*title="([^"]+)"', chunk)
+        tourney   = tourney_m.group(1) if tourney_m else "Liquipedia"
 
-            # Best-of format
-            bo_m = re.search(r'Bo(\d)', chunk, re.IGNORECASE)
-            bo   = f" (Bo{bo_m.group(1)})" if bo_m else ""
+        match_dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+        title    = f"🎮 FURIA vs {opponent}"
 
-            match_dt = datetime.fromtimestamp(ts, tz=timezone.utc)
-            title    = f"🎮 FURIA vs {opponent}"
+        results.append({
+            "title":        title,
+            "start_iso":    match_dt.isoformat(),
+            "end_iso":      (match_dt + timedelta(hours=2)).isoformat(),
+            "is_allday":    False,
+            "availability": "free",
+            "calendar_tag": "furia-cs2",
+        })
+        seen_ts.add(ts)
 
-            results.append({
-                "title":        title,
-                "start_iso":    match_dt.isoformat(),
-                "end_iso":      (match_dt + timedelta(hours=2)).isoformat(),
-                "is_allday":    False,
-                "availability": "free",
-                "calendar_tag": "furia-cs2",
-            })
-            seen_ts.add(ts)
-
-            BRT = timezone(timedelta(hours=-3))
-            print(f"    → {title}{bo}  [{tourney_name}]  "
-                  f"[{match_dt.astimezone(BRT).strftime('%a %b %d %H:%M BRT')}]")
+        _BRT = timezone(timedelta(hours=-3))
+        print(f"    → {title}{bo}  [{tourney}]  "
+              f"[{match_dt.astimezone(_BRT).strftime('%a %b %d %H:%M BRT')}]")
 
     results.sort(key=lambda x: x["start_iso"])
     if not results:
@@ -1036,8 +1057,8 @@ def _generate_changelog_html() -> None:
 
     all_changes = list(reversed(all_changes))  # newest first
 
-    sport_emoji = {"soccer": "⚽️", "tennis": "🎾", "wc": "🏆", "cs2": "🎮"}
-    sport_label = {"soccer": "Cruzeiro", "tennis": "Fonseca", "wc": "World Cup", "cs2": "FURIA"}
+    sport_emoji = {"soccer": "⚽️", "tennis": "🎾", "wc": "🏆", "cs2": "🎮", "meanwhile": "⚽"}
+    sport_label = {"soccer": "Cruzeiro", "tennis": "Fonseca", "wc": "World Cup", "cs2": "FURIA", "meanwhile": "Meanwhile"}
     type_icon   = {"added": "🆕", "confirmed": "✅", "rescheduled": "📅", "removed": "❌"}
     type_label  = {"added": "Added", "confirmed": "Time confirmed", "rescheduled": "Rescheduled", "removed": "Removed"}
     type_color  = {"added": "green", "confirmed": "blue", "rescheduled": "orange", "removed": "red"}
@@ -1197,6 +1218,7 @@ body{{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSy
 .b-tennis{{color:var(--org);border-color:rgba(245,166,35,.3);background:rgba(245,166,35,.08)}}
 .b-wc{{color:var(--blue);border-color:rgba(91,124,250,.3);background:rgba(91,124,250,.08)}}
 .b-cs2{{color:var(--pur);border-color:rgba(180,142,250,.3);background:rgba(180,142,250,.08)}}
+.b-meanwhile{{color:#f687b3;border-color:rgba(246,135,179,.3);background:rgba(246,135,179,.08)}}
 .bt-green{{color:var(--green);border-color:rgba(62,207,114,.3);background:rgba(62,207,114,.08)}}
 .bt-blue{{color:var(--blue);border-color:rgba(91,124,250,.3);background:rgba(91,124,250,.08)}}
 .bt-orange{{color:var(--org);border-color:rgba(245,166,35,.3);background:rgba(245,166,35,.08)}}
